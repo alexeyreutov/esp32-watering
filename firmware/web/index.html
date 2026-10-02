@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Автополив</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f3f6f2;--card:#fff;--ink:#1d2a22;--mute:#6b7a70;--line:#dfe6e0;--acc:#2f8f4e;--acc2:#e7f4ea;--warn:#c98a00;--warnbg:#fff6dc;--err:#c0392b;--errbg:#fde8e6;--blue:#2f6fb0;--r:12px}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--acc);color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0 8px 0 0}
+.chip{background:rgba(255,255,255,.16);border-radius:99px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.chip.bad{background:#fff;color:var(--err);font-weight:600}
+nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:44px;z-index:4}
+nav button{border:0;background:none;padding:8px 12px;border-radius:8px;font:inherit;color:var(--mute);cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:12px}
+.banner{border-radius:var(--r);padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner.warn{background:var(--warnbg)}.banner.err{background:var(--errbg);color:var(--err)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.card h3{margin:0 0 8px;font-size:16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--mute);font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:14px}
+.kv b{font-weight:600}
+.big{font-size:34px;font-weight:700;line-height:1.1}
+.bar{height:10px;border-radius:5px;background:var(--line);position:relative;margin:6px 0 8px;overflow:visible}
+.bar i{display:block;height:100%;border-radius:5px;background:var(--acc)}
+.bar s{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55}
+.tag{font-size:12px;border-radius:6px;padding:2px 7px;background:var(--acc2);color:var(--acc);font-weight:600}
+.tag.off{background:#eee;color:var(--mute)}.tag.err{background:var(--errbg);color:var(--err)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.blue{background:#e5effa;color:var(--blue)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button.b{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+button.b:hover{border-color:var(--acc)}
+button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.d{color:var(--err);border-color:#f0c6c1}
+button:disabled{opacity:.5;cursor:default}
+form .f{display:grid;grid-template-columns:minmax(150px,40%) 1fr;gap:6px 12px;align-items:center;margin:6px 0}
+label.ck{display:flex;gap:8px;align-items:center}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff}
+input[type=checkbox]{width:auto}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:8px 12px 12px;margin:0 0 12px}
+legend{font-weight:600;padding:0 6px}
+.hint{font-size:12px;color:var(--mute);grid-column:2}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mute);font-weight:500}
+tr.l1 td:nth-child(2){color:var(--warn)}tr.l2 td:nth-child(2){color:var(--err);font-weight:600}
+.chart{position:relative}
+canvas{width:100%;display:block}
+.tip{position:absolute;pointer-events:none;background:rgba(29,42,34,.92);color:#fff;font-size:12px;padding:5px 8px;border-radius:6px;white-space:nowrap;display:none}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin:6px 0}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--c)}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:10px;display:none;z-index:10;max-width:92vw}
+#toast.err{background:var(--err)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>💧 Автополив</h1>
+  <span class="chip" id="hTime">—</span>
+  <span class="chip" id="hBat">АКБ —</span>
+  <span class="chip" id="hWater">Вода —</span>
+  <span class="chip" id="hNet">Wi-Fi —</span>
+</header>
+<nav id="tabs">
+  <button data-tab="overview" class="on">Обзор</button>
+  <button data-tab="modules">Модули</button>
+  <button data-tab="charts">Графики</button>
+  <button data-tab="log">Журнал</button>
+  <button data-tab="system">Система</button>
+</nav>
+<main>
+  <div id="banners"></div>
+
+  <section id="tab-overview">
+    <div class="grid">
+      <div class="card" id="baseCard"></div>
+    </div>
+    <div class="row" style="margin:14px 0 8px"><b style="flex:1">Модули полива</b>
+      <button class="b" onclick="act({cmd:'measure',module:-1},'Измерено')">Измерить все</button></div>
+    <div class="grid" id="moduleCards"></div>
+  </section>
+
+  <section id="tab-modules" class="hidden">
+    <p class="muted">Модуль № N отвечает на I²C-адресе 0x48+N−1 (перемычка ADDR на ADS1115: GND / VDD / SDA / SCL). Положение модуля в цепочке значения не имеет.</p>
+    <div class="grid" id="moduleForms" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))"></div>
+  </section>
+
+  <section id="tab-charts" class="hidden">
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <select id="chModule" style="width:auto"></select>
+        <select id="chDays" style="width:auto">
+          <option value="7">7 дней</option><option value="30" selected>30 дней</option>
+          <option value="90">90 дней</option><option value="365">год</option><option value="0">всё</option>
+        </select>
+        <button class="b" onclick="loadCharts()">Обновить</button>
+      </div>
+      <h3 style="margin-top:14px">Влажность почвы, %</h3>
+      <div class="legend" id="chLegend"></div>
+      <div class="chart"><canvas id="cvMoist" height="260"></canvas><div class="tip" id="tipMoist"></div></div>
+      <p class="muted">Точки — измерения, столбики снизу — полив (высота ∝ длительности). Пунктир — порог полива (если выбран один модуль).</p>
+      <h3 style="margin-top:14px">Напряжение АКБ, В</h3>
+      <div class="chart"><canvas id="cvBat" height="160"></canvas><div class="tip" id="tipBat"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-log" class="hidden">
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <select id="logLevel" style="width:auto" onchange="renderLog()">
+          <option value="0">Все</option><option value="1">Предупреждения и ошибки</option><option value="2">Только ошибки</option>
+        </select>
+        <button class="b" onclick="loadLog()">Обновить</button>
+        <span style="flex:1"></span>
+        <button class="b d" onclick="if(confirm('Очистить журнал?'))act({cmd:'clear_log'},'Журнал очищен').then(loadLog)">Очистить</button>
+      </div>
+      <div style="overflow-x:auto;margin-top:8px"><table><thead><tr><th>Время</th><th>Уровень</th><th>Модуль</th><th>Событие</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="tab-system" class="hidden">
+    <form id="sysForm" onsubmit="saveSystem(event)">
+      <fieldset><legend>Wi-Fi</legend>
+        <div class="f"><span>Сеть (SSID)</span><input name="wifi.ssid" maxlength="32"></div>
+        <div class="f"><span>Пароль сети</span><input name="wifi.password" type="password" maxlength="64" placeholder="без изменений"></div>
+        <div class="f"><span>Пароль точки доступа</span><input name="wifi.apPassword" type="password" maxlength="64" placeholder="без изменений"><span class="hint">Точка «Watering-XXXX» поднимается, если сеть недоступна. Минимум 8 символов.</span></div>
+        <div class="f"><span>Имя хоста</span><input name="wifi.hostname" maxlength="31"><span class="hint">Адрес в сети: http://имя.local</span></div>
+      </fieldset>
+      <fieldset><legend>Время</legend>
+        <div class="f"><span>Часовой пояс</span><select name="time.tz" id="tzSel"></select></div>
+        <div class="f"><span>NTP-сервер</span><input name="time.ntp" maxlength="63"></div>
+        <div class="f"><span></span><button type="button" class="b" onclick="syncTime(true)">Взять время с этого устройства</button></div>
+      </fieldset>
+      <fieldset><legend>Аккумулятор</legend>
+        <div class="f"><span></span><label class="ck"><input type="checkbox" name="battery.check"> Не включать насос при низком заряде</label></div>
+        <div class="f"><span>Мин. напряжение для старта, мВ</span><input name="battery.minMv" type="number" min="3000" max="4200" step="10"></div>
+        <div class="f"><span>Аварийная остановка, мВ</span><input name="battery.abortMv" type="number" min="2800" max="4100" step="10"><span class="hint">Под нагрузкой насоса, если держится 2 с.</span></div>
+        <div class="f"><span>Поправка делителя</span><input name="battery.calibration" type="number" min="0.8" max="1.2" step="0.001"><span class="hint">= напряжение мультиметра / показание здесь × текущая поправка.</span></div>
+      </fieldset>
+      <fieldset><legend>Датчик уровня воды</legend>
+        <div class="f"><span></span><label class="ck"><input type="checkbox" name="water.check"> Не включать насос без воды</label></div>
+        <div class="f"><span>«Вода есть», когда на входе</span><select name="water.presentHigh"><option value="true">HIGH</option><option value="false">LOW</option></select><span class="hint">Проверьте: опустите датчик в воду и посмотрите индикатор «Вода» вверху.</span></div>
+      </fieldset>
+      <fieldset><legend>Насос и клапаны</legend>
+        <div class="f"><span>Макс. работа насоса, с</span><input name="pump.maxSec" type="number" min="5" max="1800"></div>
+        <div class="f"><span>Клапан открыт до насоса, мс</span><input name="pump.valveLeadMs" type="number" min="0" max="5000"></div>
+        <div class="f"><span>Клапан закрыт после насоса, мс</span><input name="pump.valveTailMs" type="number" min="0" max="5000"></div>
+        <div class="f"><span>Окно догоняющей проверки, мин</span><input name="pump.catchUpMin" type="number" min="0" max="720"><span class="hint">Если база была выключена в момент проверки, она выполнится позже, но не позднее этого окна.</span></div>
+      </fieldset>
+      <fieldset><legend>Сон и Wi-Fi</legend>
+        <div class="f"><span>Wi-Fi после кнопки, мин</span><input name="sleep.wifiMin" type="number" min="1" max="60"><span class="hint">База всегда спит и просыпается только на проверки — без Wi-Fi. Кнопка будит её с Wi-Fi; повторное нажатие или это время без активности (пока страница открыта, отсчёт не идёт) — снова сон. Полив таймаут не прерывает.</span></div>
+        <div class="f"><span>Синхронизировать время, раз в дней</span><input name="sleep.ntpDays" type="number" min="0" max="30"><span class="hint">Во сне часы уходят примерно на 15 мин в сутки. Раз в N дней база при плановой проверке на ~5 с тихо подключается к роутеру за временем (без точки доступа и без значка). 0 — только при включении кнопкой.</span></div>
+      </fieldset>
+      <fieldset><legend>Безопасность</legend>
+        <div class="f"><span>Пароль администратора</span><input name="security.adminPassword" type="password" maxlength="32" placeholder="без изменений"><span class="hint">Логин «admin». Пустой пароль — без защиты (не рекомендуется).</span></div>
+      </fieldset>
+      <div class="row"><button class="b p" type="submit">Сохранить настройки</button></div>
+    </form>
+    <fieldset style="margin-top:14px"><legend>Прошивка</legend>
+      <div class="kv" id="fwInfo"></div>
+      <div class="row"><input type="file" id="otaFile" accept=".bin" style="width:auto"><button class="b" onclick="ota()">Обновить прошивку</button></div>
+      <div class="row"><button class="b" onclick="if(confirm('Уложить базу спать? Веб-интерфейс станет недоступен до нажатия кнопки на базе.'))act({cmd:'sleep'},'База засыпает')">Уснуть сейчас</button>
+        <button class="b" onclick="if(confirm('Перезагрузить базу?'))act({cmd:'reboot'},'Перезагрузка…')">Перезагрузить</button>
+        <button class="b d" onclick="if(confirm('Удалить всю историю измерений?'))act({cmd:'clear_history'},'История очищена')">Очистить историю</button></div>
+    </fieldset>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COLORS=['#2f8f4e','#2f6fb0','#c0552b','#8e44ad'];
+const MODE_TEXT={moisture:'По влажности',schedule:'По расписанию',off:'Выключен'};
+const BLOCK_TEXT={none:'',battery_low:'низкий заряд АКБ',battery_unknown:'АКБ не определяется',no_water:'нет воды в баке',valve_fault:'авария клапана'};
+const BLOCK_BY_NUM=[null,'battery_low','battery_unknown','no_water','valve_fault'];
+const DECISION_TEXT=['полив','модуль выключен','почва влажная','ошибка датчика','датчик не откалиброван'];
+const ABORT_TEXT={1:'остановлено вручную',2:'кончилась вода',3:'просел АКБ',4:'выключение/обновление'};
+const KIND_TEXT=['по расписанию','вручную','тест клапана'];
+const RESET_TEXT={1:'включение питания',2:'кнопка RESET',3:'программный',4:'сбой (panic)',5:'watchdog',6:'watchdog задачи',7:'watchdog',8:'выход из сна',9:'просадка питания'};
+const WAKE_TEXT={4:'по таймеру',7:'кнопкой'};
+const EVENT_TEXT={
+  1:(a)=>`Запуск базы (${RESET_TEXT[a]||'причина '+a})`,
+  2:(a)=>`Перезагрузка во время работы насоса (${RESET_TEXT[a]||a}) — проверьте питание насоса`,
+  3:(a)=>a?'Время установлено с браузера':'Время синхронизировано по NTP',
+  4:()=>'Время не установлено — проверки по расписанию на паузе',
+  5:()=>'Настройки сохранены',
+  6:(a)=>`Подключено к Wi-Fi (RSSI ${a} дБм)`,
+  7:()=>'Запущена точка доступа',
+  8:()=>'После сброса клапан был открыт — закрыт',
+  10:()=>'Модуль на связи',11:()=>'Модуль не отвечает',
+  12:(a,b)=>`Измерение: ${b}% (raw ${a})`,
+  13:()=>'Ошибка чтения датчика',
+  20:(a,b)=>`Полив пропущен: ${DECISION_TEXT[a]||a}${a==2?` (${b}%)`:''}`,
+  21:(a,b)=>`Полив начат: ${a} с, ${KIND_TEXT[b]||''}`,
+  22:(a)=>`Полив завершён: ${a} с`,
+  23:(a,b)=>`Полив прерван: ${ABORT_TEXT[a]||a}, отработал ${b} с`,
+  24:(a)=>`Насос заблокирован: ${BLOCK_TEXT[BLOCK_BY_NUM[a]]||a}`,
+  25:()=>'Не удалось открыть клапан (нет ответа по I²C)',
+  26:()=>'НЕ УДАЛОСЬ ЗАКРЫТЬ КЛАПАН — насос заблокирован до восстановления',
+  27:()=>'Клапан закрыт, авария снята',
+  28:(a)=>`Напряжение на модуле при открытом клапане: ${(a/1000).toFixed(2)} В`,
+  29:()=>'Тест клапана завершён',
+  30:(a)=>`Уход в сон на ${fmtDur(a)}`,
+  31:(a)=>`Пробуждение ${WAKE_TEXT[a]||'(причина '+a+')'}`,
+  32:()=>'Начато обновление прошивки',33:()=>'Прошивка обновлена',34:(a)=>`Ошибка обновления (${a})`,
+  35:(a,b)=>`Калибровка «${a?'мокро':'сухо'}»: raw ${b}`,
+  36:()=>'Сброс Wi-Fi долгим нажатием кнопки',
+  37:(a,b)=>`Тревога: ${alarmText(a)} (АКБ ${(b/1000).toFixed(2)} В) — красный диод включён`,
+  38:(a,b)=>`Тревога снята: ${alarmText(a)} (АКБ ${(b/1000).toFixed(2)} В)`,
+  39:(a,b)=>a?'Wi-Fi включён кнопкой':`Wi-Fi выключен: ${b?'нет активности':'кнопка / команда'}`,
+};
+function alarmText(bits){const t=[];if(bits&1)t.push('нет воды');if(bits&2)t.push('низкий заряд');return t.join(', ')}
+
+let S=null,C=null,LOG=null,HIST=null,tab='overview',pollTimer=0,timeSynced=false;
+
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className=err?'err':'';t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',err?6000:2500)}
+async function api(path,body){
+  const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(j&&j.error||('HTTP '+r.status));
+  return j;
+}
+async function act(body,okMsg){try{await api('/api/action',body);if(okMsg)toast(okMsg);await refresh()}catch(e){toast(e.message,true)}}
+
+function fmtDur(s){s=Math.max(0,Math.round(s));if(s<90)return s+' с';if(s<5400)return Math.round(s/60)+' мин';if(s<172800)return (s/3600).toFixed(1).replace('.0','')+' ч';return Math.round(s/86400)+' дн'}
+function fmtTs(ts){if(!ts)return '—';const d=new Date(ts*1000);return d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+function fmtAgo(ts){if(!ts||!S||!S.time.valid)return '—';const d=S.time.epoch-ts;return d<0?fmtTs(ts):fmtDur(d)+' назад'}
+function fmtIn(ts){if(!ts||!S||!S.time.valid)return '—';const d=ts-S.time.epoch;return d<=0?'сейчас':'через '+fmtDur(d)+' ('+fmtTs(ts)+')'}
+
+// ---------- status / overview ----------
+async function refresh(){
+  try{S=await api('/api/status')}catch(e){$('#hNet').textContent='нет связи';$('#hNet').className='chip bad';return}
+  if(!S.time.valid&&!timeSynced){timeSynced=true;syncTime(false)}
+  renderHeader();renderBanners();
+  if(tab==='overview')renderOverview();
+  if(tab==='modules')updateModuleLive();
+}
+function renderHeader(){
+  $('#hTime').textContent=S.time.valid?S.time.local.slice(0,16):'время не задано';
+  $('#hTime').className='chip'+(S.time.valid?'':' bad');
+  const b=S.battery;
+  $('#hBat').textContent=b.present?`АКБ ${(b.mv/1000).toFixed(2)} В · ${b.pct}%${b.underLoad?' (нагрузка)':''}`:'АКБ не найден';
+  $('#hBat').className='chip'+((b.check&&(!b.present||b.mv<b.minMv))?' bad':'');
+  $('#hWater').textContent=S.water.present?'Вода есть':'Нет воды';
+  $('#hWater').className='chip'+(S.water.check&&!S.water.present?' bad':'');
+  const n=S.net;
+  $('#hNet').textContent=n.sta?`${n.ssid} ${n.rssi} дБм`:(n.ap?`AP ${n.apSsid}`:'Wi-Fi нет');
+  $('#hNet').className='chip';
+}
+function renderBanners(){
+  const out=[];const c=S.controller;
+  if(c.state==='fault')out.push(['err','Авария: клапан не подтвердил закрытие. Насос заблокирован, база повторяет попытку каждые 5 с. Проверьте кабель I²C и модуль.']);
+  if(!S.time.valid)out.push(['warn','Время не установлено — проверки идут раз в сутки от момента сна, а не в заданное время. <button class="b" onclick="syncTime(true)">Взять время с этого устройства</button>']);
+  if(C&&!C.security.adminPasswordSet)out.push(['warn','Пароль администратора не задан: любой в этой сети может управлять поливом. Задайте его во вкладке «Система».']);
+  if(c.lastBlock!=='none'&&c.state==='idle')out.push(['warn','Последний полив заблокирован: '+BLOCK_TEXT[c.lastBlock]+'.']);
+  if(S.alarms.noWater)out.push(['err','Тревога «нет воды»: на базе горит красный диод, насос не включается, пока бак пуст. После доливки тревога снимется при следующем пробуждении (или нажмите кнопку дважды: сон → пробуждение).']);
+  if(S.alarms.lowBattery)out.push(['err','Тревога «низкий заряд»: на базе горит красный диод, насос не включается ниже порога. После зарядки тревога снимется при следующем пробуждении.']);
+  if(S.power.mode==='session'&&S.power.sleepInSec>=0)out.push(['warn',`База уснёт через ${fmtDur(S.power.sleepInSec)} без активности (пока страница открыта — не уснёт) или по нажатию кнопки.`]);
+  $('#banners').innerHTML=out.map(([k,t])=>`<div class="banner ${k}">${t}</div>`).join('');
+}
+function renderOverview(){
+  const c=S.controller;const busy=c.state!=='idle'&&c.state!=='fault';
+  const stateText={idle:'ожидание',valve_lead:'открывается клапан',pumping:c.kind==2?'тест клапана':'полив',pump_tail:'закрывается клапан',fault:'АВАРИЯ'}[c.state]||c.state;
+  const active=c.module>=0?S.modules[c.module].name:'';
+  $('#baseCard').innerHTML=`<h3>База <span class="tag ${c.state==='fault'?'err':busy?'blue':''}">${stateText}</span></h3>
+   <div class="kv">
+    <span>Насос</span><b>${c.pumpOn?'работает':'выключен'}</b>
+    ${busy?`<span>Модуль</span><b>${esc(active)}${c.remainingSec?' · осталось '+fmtDur(c.remainingSec):''}</b>`:''}
+    <span>В очереди</span><b>${c.queued}</b>
+    <span>АКБ</span><b>${S.battery.present?(S.battery.mv/1000).toFixed(2)+' В ('+S.battery.pct+'%)':'не найден'}</b>
+    <span>Уровень воды</span><b>${S.water.present?'есть':'нет'}${S.water.check?'':' (не проверяется)'}</b>
+    <span>Сеть</span><b>${S.net.sta?esc(S.net.ip):''}${S.net.ap?' AP '+esc(S.net.apSsid):''}</b>
+   </div>
+   <div class="row">${busy||c.queued?'<button class="b d" onclick="act({cmd:\'stop\'},\'Остановлено\')">Остановить всё</button>':''}</div>`;
+  $('#moduleCards').innerHTML=S.modules.map(m=>{
+    const state=!m.present?'<span class="tag err">нет связи</span>':!m.enabled?'<span class="tag off">выключен</span>':m.valveOpen?'<span class="tag blue">клапан открыт</span>':`<span class="tag">${MODE_TEXT[m.mode]}</span>`;
+    const pct=m.readingOk?m.pct:null;
+    return `<div class="card"><h3><span>${esc(m.name)} <span class="muted">0x${m.address.toString(16)}</span></span>${state}</h3>
+      <div class="big">${pct===null?'—':pct+'%'}</div>
+      <div class="bar"><i style="width:${pct||0}%;background:${pct!==null&&pct<m.threshold?'var(--warn)':'var(--acc)'}"></i><s style="left:${m.threshold}%" title="порог"></s></div>
+      <div class="kv muted">
+        <span>Порог</span><span>${m.threshold}%${m.calibrated?'':' · <b style="color:var(--warn)">не откалиброван</b>'}</span>
+        <span>Измерено</span><span>${fmtAgo(m.lastMeasureTs)}${m.readingOk?' · raw '+m.raw:''}</span>
+        <span>Полив</span><span>${m.lastWaterTs?fmtAgo(m.lastWaterTs)+' · '+m.lastWaterSec+' с':'—'}</span>
+        <span>Проверка</span><span>${m.enabled&&m.mode!=='off'?fmtIn(m.nextCheckTs):'—'}</span>
+      </div>
+      <div class="row">
+        <button class="b" ${busy||!m.present?'disabled':''} onclick="act({cmd:'measure',module:${m.index}},'Измерено')">Измерить</button>
+        <button class="b p" ${!m.present?'disabled':''} onclick="waterNow(${m.index})">Полить</button>
+        <button class="b" ${!m.present?'disabled':''} onclick="act({cmd:'valve_test',module:${m.index}},'Клапан откроется на 5 с')">Тест клапана</button>
+      </div></div>`;
+  }).join('');
+}
+function waterNow(i){
+  const def=C?C.modules[i].duration:30;
+  const v=prompt(`Полить «${S.modules[i].name}», секунд:`,def);
+  if(v===null)return;const s=parseInt(v,10);
+  if(!(s>0)){toast('Нужно число секунд',true);return}
+  act({cmd:'water',module:i,seconds:s},'Полив поставлен в очередь');
+}
+async function syncTime(manual){
+  try{await api('/api/time',{epoch:Math.floor(Date.now()/1000)});if(manual)toast('Время установлено');await refresh()}catch(e){if(manual)toast(e.message,true)}
+}
+
+// ---------- config ----------
+async function loadConfig(){try{C=await api('/api/config')}catch(e){toast(e.message,true)}}
+
+function renderModuleForms(){
+  if(!C)return;
+  $('#moduleForms').innerHTML=C.modules.map((m,i)=>`<form class="card" onsubmit="saveModule(event,${i})">
+   <h3>Модуль ${i+1} <span class="muted">0x${(0x48+i).toString(16)}</span> <span id="live${i}" class="muted"></span></h3>
+   <div class="f"><span></span><label class="ck"><input type="checkbox" name="enabled" ${m.enabled?'checked':''}> Включён</label></div>
+   <div class="f"><span>Название</span><input name="name" value="${esc(m.name)}" maxlength="40"></div>
+   <div class="f"><span>Режим</span><select name="mode">${Object.entries(MODE_TEXT).map(([k,t])=>`<option value="${k}" ${m.mode===k?'selected':''}>${t}</option>`).join('')}</select></div>
+   <div class="f"><span>Время проверки</span><input name="time" type="time" value="${m.time}" required></div>
+   <div class="f"><span>Каждые N дней</span><input name="everyDays" type="number" min="1" max="30" value="${m.everyDays}"></div>
+   <div class="f"><span>Порог влажности, %</span><input name="threshold" type="number" min="0" max="100" value="${m.threshold}"><span class="hint">Поливать, если влажность ниже порога (режим «По влажности»).</span></div>
+   <div class="f"><span>Длительность полива, с</span><input name="duration" type="number" min="1" max="${C.pump.maxSec}" value="${m.duration}"></div>
+   <div class="f"><span>raw «сухо» / «мокро»</span><span style="display:flex;gap:6px"><input name="dryRaw" type="number" value="${m.dryRaw}"><input name="wetRaw" type="number" value="${m.wetRaw}"></span></div>
+   <div class="f"><span>Калибровка</span><span style="display:flex;gap:6px;flex-wrap:wrap">
+     <button type="button" class="b" onclick="calibrate(${i},'dry')">Сухо (датчик в воздухе)</button>
+     <button type="button" class="b" onclick="calibrate(${i},'wet')">Мокро (в стакане воды)</button></span></div>
+   <div class="f"><span></span><label class="ck"><input type="checkbox" name="lineSense" ${m.lineSense?'checked':''}> Делитель 10k/10k с линии 5 В на A1</label></div>
+   <div class="row"><button class="b p" type="submit">Сохранить модуль</button></div>
+  </form>`).join('');
+  updateModuleLive();
+}
+function updateModuleLive(){
+  if(!S)return;
+  S.modules.forEach((m,i)=>{const el=$('#live'+i);if(el)el.textContent=m.present?(m.readingOk?`сейчас raw ${m.raw} · ${m.pct}%`:'на связи'):'нет связи'});
+}
+async function saveModule(ev,i){
+  ev.preventDefault();const f=ev.target;const m={
+    enabled:f.enabled.checked,name:f.name.value.trim(),mode:f.mode.value,time:f.time.value,
+    everyDays:+f.everyDays.value,threshold:+f.threshold.value,duration:+f.duration.value,
+    dryRaw:+f.dryRaw.value,wetRaw:+f.wetRaw.value,lineSense:f.lineSense.checked};
+  const modules=[null,null,null,null];modules[i]=m;
+  try{await api('/api/config',{modules});toast('Модуль сохранён');await loadConfig();renderModuleForms();refresh()}catch(e){toast(e.message,true)}
+}
+async function calibrate(i,point){
+  const what=point==='dry'?'Достаньте датчик и протрите насухо (в воздухе).':'Опустите датчик в стакан воды до линии.';
+  if(!confirm(what+'\nНажмите OK, когда показания установятся (~10 с).'))return;
+  try{await api('/api/action',{cmd:'calibrate',module:i,point});toast('Калибровка сохранена');await loadConfig();renderModuleForms();refresh()}catch(e){toast(e.message,true)}
+}
+
+const TZ=[['UTC0','UTC'],['EET-2','Калининград (UTC+2)'],['MSK-3','Москва (UTC+3)'],['<+04>-4','Самара (UTC+4)'],['<+05>-5','Екатеринбург (UTC+5)'],['<+06>-6','Омск (UTC+6)'],['<+07>-7','Новосибирск, Красноярск (UTC+7)'],['<+08>-8','Иркутск (UTC+8)'],['<+09>-9','Якутск (UTC+9)'],['<+10>-10','Владивосток (UTC+10)'],['<+11>-11','Магадан (UTC+11)'],['<+12>-12','Камчатка (UTC+12)']];
+function renderSystem(){
+  if(!C)return;const f=$('#sysForm');
+  const tz=$('#tzSel');tz.innerHTML=TZ.map(([v,t])=>`<option value="${esc(v)}">${t}</option>`).join('');
+  if(!TZ.some(([v])=>v===C.time.tz))tz.insertAdjacentHTML('beforeend',`<option value="${esc(C.time.tz)}">${esc(C.time.tz)}</option>`);
+  for(const el of f.elements){
+    if(!el.name)continue;const [g,k]=el.name.split('.');const v=C[g]?C[g][k]:undefined;
+    if(el.type==='password'){el.value='';el.placeholder=(g==='wifi'&&k==='password'&&!C.wifi.passwordSet)||(g==='security'&&!C.security.adminPasswordSet)?'не задан':'без изменений';continue}
+    if(el.type==='checkbox')el.checked=!!v;else if(v!==undefined)el.value=String(v);
+  }
+  $('#fwInfo').innerHTML=S?`<span>Версия</span><b>${esc(S.fw)}</b><span>Работает</span><b>${fmtDur(S.uptime)}</b><span>Имя</span><b>http://${esc(S.net.hostname)}.local</b>`:'';
+}
+async function saveSystem(ev){
+  ev.preventDefault();const body={};
+  for(const el of ev.target.elements){
+    if(!el.name)continue;const [g,k]=el.name.split('.');body[g]=body[g]||{};
+    if(el.type==='password'){if(el.value)body[g][k]=el.value;continue}
+    if(el.type==='checkbox')body[g][k]=el.checked;
+    else if(el.type==='number')body[g][k]=Number(el.value);
+    else if(el.value==='true'||el.value==='false')body[g][k]=el.value==='true';
+    else body[g][k]=el.value;
+  }
+  try{const r=await api('/api/config',body);toast(r.wifiReconnect?'Сохранено. База переподключается к Wi-Fi — адрес может измениться.':'Настройки сохранены');await loadConfig();renderSystem()}catch(e){toast(e.message,true)}
+}
+async function ota(){
+  const file=$('#otaFile').files[0];if(!file){toast('Выберите файл firmware.bin',true);return}
+  if(!confirm('Полив будет остановлен, база перезагрузится. Продолжить?'))return;
+  const fd=new FormData();fd.append('firmware',file,file.name);toast('Загрузка…');
+  try{const r=await fetch('/api/update',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'HTTP '+r.status);toast('Готово, перезагрузка…')}catch(e){toast(e.message,true)}
+}
+
+// ---------- log ----------
+async function loadLog(){try{LOG=await api('/api/log?limit=300');renderLog()}catch(e){toast(e.message,true)}}
+function renderLog(){
+  if(!LOG)return;const min=+$('#logLevel').value;
+  const names=S?S.modules.map(m=>m.name):[];
+  $('#logBody').innerHTML=LOG.records.slice().reverse().filter(r=>(r[2]&0x7f)>=min).map(([ts,code,lvl,mod,a,b])=>{
+    const level=lvl&0x7f;const up=lvl&0x80;
+    const fn=EVENT_TEXT[code];const text=fn?fn(a,b):`Событие ${code} (${a}, ${b})`;
+    return `<tr class="l${level}"><td>${up?'+'+fmtDur(ts)+' от старта':fmtTs(ts)}</td><td>${['инфо','внимание','ошибка'][level]||level}</td><td>${mod>=0?esc(names[mod]||'№'+(mod+1)):''}</td><td>${esc(text)}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" class="muted">Журнал пуст</td></tr>';
+}
+
+// ---------- charts ----------
+async function loadCharts(){
+  const mod=$('#chModule').value,days=$('#chDays').value;
+  try{HIST=await api(`/api/history?days=${days}${mod>=0?'&module='+mod:''}`);drawCharts()}catch(e){toast(e.message,true)}
+}
+function setupChartSelect(){
+  const sel=$('#chModule');const cur=sel.value;
+  const names=C?C.modules.map(m=>m.name):['1','2','3','4'];
+  sel.innerHTML='<option value="-1">Все модули</option>'+names.map((n,i)=>`<option value="${i}">${esc(n)}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+function drawCharts(){
+  if(!HIST)return;
+  const rec=HIST.records.filter(r=>!(r[6]&0x80));
+  const names=C?C.modules.map(m=>m.name):[];
+  const mods=[...new Set(rec.map(r=>r[1]))].sort();
+  $('#chLegend').innerHTML=mods.map(m=>`<span style="--c:${COLORS[m]}">${esc(names[m]||'№'+(m+1))}</span>`).join('');
+  const t1=HIST.timeValid?HIST.now:(rec.length?rec[rec.length-1][0]:0);
+  const days=+$('#chDays').value;
+  const t0=days>0?t1-days*86400:(rec.length?rec[0][0]:t1-86400);
+  const sel=+$('#chModule').value;
+  const series=mods.map(m=>({color:COLORS[m],name:names[m]||'№'+(m+1),
+    points:rec.filter(r=>r[1]===m&&!(r[6]&1)&&!(r[6]&2)&&r[3]!==0).map(r=>({t:r[0],v:r[2],raw:r[3]})),
+    bars:rec.filter(r=>r[1]===m&&(r[6]&1)).map(r=>({t:r[0],v:r[5]}))}));
+  const thr=sel>=0&&C?C.modules[sel].threshold:null;
+  const maxBar=Math.max(1,...series.flatMap(s=>s.bars.map(b=>b.v)));
+  chart($('#cvMoist'),$('#tipMoist'),{t0,t1,yMin:0,yMax:100,series,threshold:thr,unit:'%',maxBar});
+  // Measurement records only: watering records are taken right after the
+  // pump and would draw a sag after every run.
+  const batPts=[];const seen=new Set();
+  for(const r of rec){if(r[4]>2500&&!(r[6]&1)&&!seen.has(r[0])){seen.add(r[0]);batPts.push({t:r[0],v:r[4]/1000})}}
+  const vs=batPts.map(p=>p.v);
+  chart($('#cvBat'),$('#tipBat'),{t0,t1,yMin:vs.length?Math.min(3.2,...vs):3.2,yMax:vs.length?Math.max(4.25,...vs):4.25,series:[{color:'#c98a00',name:'АКБ',points:batPts,bars:[]}],threshold:C?C.battery.minMv/1000:null,unit:' В',dec:2});
+}
+function chart(cv,tip,o){
+  const dpr=window.devicePixelRatio||1;const W=cv.clientWidth,H=+cv.getAttribute('height');
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';const g=cv.getContext('2d');g.scale(dpr,dpr);
+  const L=40,R=10,T=10,B=24;const pw=W-L-R,ph=H-T-B;
+  const span=Math.max(1,o.t1-o.t0);
+  const X=t=>L+(t-o.t0)/span*pw,Y=v=>T+(1-(v-o.yMin)/(o.yMax-o.yMin))*ph;
+  g.clearRect(0,0,W,H);g.font='11px system-ui';g.fillStyle='#6b7a70';g.strokeStyle='#e6ece7';g.lineWidth=1;
+  for(let i=0;i<=4;i++){const v=o.yMin+(o.yMax-o.yMin)*i/4;const y=Y(v);g.beginPath();g.moveTo(L,y);g.lineTo(W-R,y);g.stroke();g.fillText(v.toFixed(o.dec||0),4,y+4)}
+  const dayStep=span>40*86400?7*86400:span>10*86400?2*86400:86400;
+  const startDay=new Date(o.t0*1000);startDay.setHours(0,0,0,0);
+  for(let t=startDay.getTime()/1000;t<=o.t1;t+=dayStep){if(t<o.t0)continue;const x=X(t);g.beginPath();g.moveTo(x,T);g.lineTo(x,T+ph);g.stroke();
+    const d=new Date(t*1000);g.fillText(d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'}),x-14,H-6)}
+  if(o.threshold!=null){g.save();g.setLineDash([5,4]);g.strokeStyle='#c0552b';g.beginPath();g.moveTo(L,Y(o.threshold));g.lineTo(W-R,Y(o.threshold));g.stroke();g.restore()}
+  const hit=[];
+  o.series.forEach((s,si)=>{
+    const bw=Math.max(3,Math.min(10,pw/span*86400*0.25));
+    g.fillStyle=s.color+'99';
+    for(const b of s.bars){const h=Math.max(4,b.v/o.maxBar*ph*0.3);const x=X(b.t)-bw/2+si*2;g.fillRect(x,T+ph-h,bw,h);hit.push({x:X(b.t),y:T+ph-h/2,txt:`${s.name}: полив ${b.v} с · ${fmtTs(b.t)}`})}
+    g.strokeStyle=s.color;g.fillStyle=s.color;g.lineWidth=2;g.beginPath();
+    s.points.forEach((p,i)=>{const x=X(p.t),y=Y(p.v);i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke();
+    for(const p of s.points){const x=X(p.t),y=Y(p.v);g.beginPath();g.arc(x,y,2.6,0,7);g.fill();hit.push({x,y,txt:`${s.name}: ${p.v.toFixed(o.dec||0)}${o.unit}${p.raw?' (raw '+p.raw+')':''} · ${fmtTs(p.t)}`})}
+  });
+  if(!o.series.some(s=>s.points.length||s.bars.length)){g.fillStyle='#6b7a70';g.font='14px system-ui';g.fillText('Нет данных за период',L+pw/2-70,T+ph/2)}
+  const move=e=>{const r=cv.getBoundingClientRect();const pt=e.touches?e.touches[0]:e;const mx=pt.clientX-r.left,my=pt.clientY-r.top;
+    let best=null,bd=900;for(const h of hit){const d=(h.x-mx)**2+(h.y-my)**2;if(d<bd){bd=d;best=h}}
+    if(!best){tip.style.display='none';return}tip.textContent=best.txt;tip.style.display='block';
+    tip.style.left=Math.min(best.x+8,W-tip.offsetWidth-4)+'px';tip.style.top=Math.max(0,best.y-30)+'px'};
+  cv.onmousemove=move;cv.ontouchstart=move;cv.onmouseleave=()=>tip.style.display='none';
+}
+
+// ---------- tabs / polling ----------
+function show(t){
+  tab=t;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+t));
+  if(t==='overview'&&S)renderOverview();
+  if(t==='modules')renderModuleForms();
+  if(t==='charts'){setupChartSelect();loadCharts()}
+  if(t==='log')loadLog();
+  if(t==='system')renderSystem();
+}
+$('#tabs').onclick=e=>{if(e.target.dataset.tab)show(e.target.dataset.tab)};
+$('#chModule').onchange=loadCharts;$('#chDays').onchange=loadCharts;
+window.addEventListener('resize',()=>{if(tab==='charts')drawCharts()});
+// Polling keeps the Wi-Fi session alive, so it stops while the tab is hidden.
+function schedulePoll(){clearTimeout(pollTimer);if(document.hidden)return;
+  const busy=S&&S.controller.state!=='idle';pollTimer=setTimeout(async()=>{await refresh();schedulePoll()},busy?1000:4000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();schedulePoll()}else clearTimeout(pollTimer)});
+(async()=>{await loadConfig();await refresh();schedulePoll()})();
+</script>
+</body>
+</html>
