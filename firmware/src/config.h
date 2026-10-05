@@ -23,7 +23,7 @@ struct ModuleConfig {
   // Typical v1.2 capacitive probe on 3.3 V: ~2.2 V in air, ~0.9 V in water.
   int16_t dryRaw = 17600;
   int16_t wetRaw = 7200;
-  bool lineSense = false;  // 10k/10k divider from the 5 V line fitted on A1
+  bool lineSense = false;  // 100k/100k divider from the 5 V line fitted on A1
 
   Calibration calibration() const { return {dryRaw, wetRaw}; }
 };

@@ -19,8 +19,8 @@ esp32-watering/
 │   ├── mock_server.py       # имитация API базы для работы над UI
 │   └── docker-build.sh      # тесты + сборка в контейнере
 └── docs/
-    ├── hardware/pins.md     # распиновка «что куда»
-    ├── hardware/wiring.md   # общая схема подключения
+    ├── hardware/pins.md     # распиновка «что куда» (+ pins.html — наглядная версия)
+    ├── hardware/wiring.md   # общая схема подключения (+ wiring.html — наглядная версия)
     └── TESTING-bench.md     # чек-лист стенда
 ```
 
@@ -47,8 +47,8 @@ docker run --rm `
 
 | Что | С чем держать в lockstep |
 |-----|--------------------------|
-| `firmware/src/board_config.h` (пины) | `docs/hardware/pins.md` и `docs/hardware/wiring.md` |
-| Экраны `firmware/src/display.cpp` | таблица экранов в `docs/hardware/pins.md` §5 |
+| `firmware/src/board_config.h` (пины) | `docs/hardware/pins.md`, `wiring.md` и их `.html`-версии (SVG-схемы внутри) |
+| Экраны `firmware/src/display.cpp` | таблица экранов в `docs/hardware/pins.md` §5 и макеты экранов в `pins.html` |
 | JSON-формат `firmware/src/web_ui.cpp` и `config.cpp` | `firmware/web/index.html` и `tools/mock_server.py` |
 | `firmware/src/core/event_codes.h` | `EVENT_TEXT` и таблицы причин в `firmware/web/index.html` |
 | Флаги `HistoryFlags` в `records.h` | фильтры графиков в `index.html`, генератор в `mock_server.py` |

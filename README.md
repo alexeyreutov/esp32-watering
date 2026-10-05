@@ -11,6 +11,7 @@
 | [`firmware/web/index.html`](firmware/web/index.html) | веб-интерфейс, вшивается в прошивку |
 | [`docs/hardware/pins.md`](docs/hardware/pins.md) | распиновка «что куда»: каждый вывод ESP32, базы, разъёма линии и модуля; что на экране |
 | [`docs/hardware/wiring.md`](docs/hardware/wiring.md) | общая схема подключения базы, модулей и кабеля; сон, кнопка, тревоги |
+| [`docs/hardware/pins.html`](docs/hardware/pins.html), [`wiring.html`](docs/hardware/wiring.html) | те же документы в наглядном виде: рисунок платы, схемы, экраны (открыть в браузере) |
 | [`docs/TESTING-bench.md`](docs/TESTING-bench.md) | пошаговая проверка на стенде |
 | [`tools/mock_server.py`](tools/mock_server.py) | имитация API базы для работы над UI без железа |
 | [`tools/docker-build.sh`](tools/docker-build.sh) | сборка и тесты в Docker без локального PlatformIO |

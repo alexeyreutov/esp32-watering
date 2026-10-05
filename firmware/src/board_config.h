@@ -45,7 +45,7 @@ constexpr uint32_t kI2cHz = 20000;
 constexpr uint16_t kI2cTimeoutMs = 50;
 
 constexpr float kBatteryDividerRatio = 2.0f;  // (100k + 100k) / 100k
-constexpr float kLineDividerRatio = 2.0f;     // module A1: 10k/10k from the 5 V line
+constexpr float kLineDividerRatio = 2.0f;     // module A1: 100k/100k from the 5 V line
 
 constexpr uint16_t kBusSettleMs = 400;  // after switching line power: sensors + ADS POR
 

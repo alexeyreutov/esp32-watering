@@ -327,7 +327,7 @@ function renderModuleForms(){
    <div class="f"><span>Калибровка</span><span style="display:flex;gap:6px;flex-wrap:wrap">
      <button type="button" class="b" onclick="calibrate(${i},'dry')">Сухо (датчик в воздухе)</button>
      <button type="button" class="b" onclick="calibrate(${i},'wet')">Мокро (в стакане воды)</button></span></div>
-   <div class="f"><span></span><label class="ck"><input type="checkbox" name="lineSense" ${m.lineSense?'checked':''}> Делитель 10k/10k с линии 5 В на A1</label></div>
+   <div class="f"><span></span><label class="ck"><input type="checkbox" name="lineSense" ${m.lineSense?'checked':''}> Делитель 100k/100k с линии 5 В на A1</label></div>
    <div class="row"><button class="b p" type="submit">Сохранить модуль</button></div>
   </form>`).join('');
   updateModuleLive();
