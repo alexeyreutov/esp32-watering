@@ -691,12 +691,12 @@
       </details>
       <details class="card">
         <summary>
-          <span class="chip from">ADS1115 ALRT</span><span class="ar">→</span><span class="chip to">MOSFET клапана IN−</span>
+          <span class="chip from">ADS1115 ALRT</span><span class="ar">→</span><span class="chip to">LR7843 (см. §4)</span>
           <span class="desc">открыть / закрыть клапан</span><span class="tag t-req">паять</span><span class="tag t-imp">без подтяжки к 5 В</span><span class="chev"></span>
         </summary>
         <div class="body">
-          <p>Модуль LR7843 с оптроном: <strong>IN+ → 3V3 линии</strong>, <strong>IN− → ALRT</strong>. ALRT — открытый сток: притянут к земле = клапан открыт, отпущен = закрыт (состояние после подачи питания).</p>
-          <p>Без оптрона на модуле схема не работает — нужен PNP-инвертор, см. <a href="wiring.html#alrt">wiring.html</a>.</p>
+          <p>Чёрная LR7843 / HW-532 с оптроном (PWM/GND). Если сигнальный GND <strong>не</strong> звонится с силовым −: <strong>PWM → 3V3</strong>, сигнальный <strong>GND → ALRT</strong>. Иначе — BC557, см. <a href="wiring.html#alrt">wiring.html §4</a>.</p>
+          <p>ALRT — открытый сток: к земле = открыть клапан, отпущен = закрыт. Без оптрона на модуле — не использовать.</p>
         </div>
       </details>
       <details class="card">
