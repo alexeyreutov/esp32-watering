@@ -40,6 +40,7 @@ const char *PowerManager::modeKey() const {
 uint8_t PowerManager::alarms() const { return g_alarms; }
 bool PowerManager::noWaterAlarm() const { return g_alarms & kAlarmNoWater; }
 bool PowerManager::lowBatteryAlarm() const { return g_alarms & kAlarmLowBattery; }
+bool PowerManager::waterFailAlarm() const { return g_alarms & kAlarmWaterFail; }
 
 void PowerManager::setAlarms(uint8_t bits) {
   const uint8_t raised = static_cast<uint8_t>(bits & ~g_alarms);
@@ -56,6 +57,10 @@ void PowerManager::setAlarms(uint8_t bits) {
 
 void PowerManager::raiseAlarm(uint8_t bits) { setAlarms(static_cast<uint8_t>(g_alarms | bits)); }
 
+void PowerManager::clearAlarm(uint8_t bits) {
+  setAlarms(static_cast<uint8_t>(g_alarms & static_cast<uint8_t>(~bits)));
+}
+
 void PowerManager::sampleBattery() {
   // Under pump load the cell sags; the idle value is what the icon means.
   if (app_->pump.isOn()) {
@@ -69,7 +74,9 @@ void PowerManager::evaluateAlarms() {
   const AppConfig &c = app_->config;
   const AlarmInputs in{c.batteryCheck, batteryMv_, c.batteryMinMv, c.waterCheck,
                        app_->water.waterPresent(c.waterPresentHigh)};
-  setAlarms(alarmBits(wat::evaluateAlarms(in)));
+  // waterFail is latched by Garden across wakes; tank/battery bits are recomputed.
+  const uint8_t latched = static_cast<uint8_t>(g_alarms & kAlarmWaterFail);
+  setAlarms(static_cast<uint8_t>(alarmBits(wat::evaluateAlarms(in)) | latched));
 }
 
 void PowerManager::begin(App &app) {

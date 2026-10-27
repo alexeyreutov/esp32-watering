@@ -6,14 +6,16 @@
 namespace wat {
 
 Alarms evaluateAlarms(const AlarmInputs &in) {
-  Alarms a{false, false};
+  Alarms a{false, false, false};
   a.noWater = in.waterCheck && !in.waterPresent;
   a.lowBattery = in.batteryCheck && (in.batteryMv < kBatteryAbsentMv || in.batteryMv < in.batteryMinMv);
+  // waterFail is latched elsewhere (Garden) and merged by PowerManager.
   return a;
 }
 
 uint8_t alarmBits(const Alarms &a) {
-  return static_cast<uint8_t>((a.noWater ? kAlarmNoWater : 0) | (a.lowBattery ? kAlarmLowBattery : 0));
+  return static_cast<uint8_t>((a.noWater ? kAlarmNoWater : 0) | (a.lowBattery ? kAlarmLowBattery : 0) |
+                             (a.waterFail ? kAlarmWaterFail : 0));
 }
 
 uint8_t alarmForBlock(PumpBlock block) {

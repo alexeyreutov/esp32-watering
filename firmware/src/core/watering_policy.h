@@ -40,6 +40,19 @@ enum class WaterDecision : uint8_t {
 WaterDecision decideWatering(ModuleMode mode, bool readingOk, bool calibrated, uint8_t moisturePct,
                              uint8_t thresholdPct);
 
+// Sticky flag from the previous scheduled check: "we decided to water".
+// Used to detect "watered last time, still dry now" → mechanics / empty tank.
+enum class StickyWaterMemory : uint8_t {
+  Keep = 0,       // sensor error / uncalibrated: do not change NVS
+  SetWanted = 1,  // this check wanted water
+  ClearWanted = 2,
+};
+
+StickyWaterMemory stickyWaterMemoryAfter(ModuleMode mode, WaterDecision decision);
+
+// Moisture mode only: previous check wanted water, this check wants water again.
+bool shouldRaiseWaterFailAlarm(ModuleMode mode, bool previousWantedWater, WaterDecision decision);
+
 // Stable machine keys for the web API; the UI owns the human text.
 const char *pumpBlockKey(PumpBlock block);
 const char *waterDecisionKey(WaterDecision decision);

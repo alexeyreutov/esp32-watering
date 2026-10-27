@@ -154,6 +154,27 @@ void test_decide_watering() {
   ASSERT_ENUM(WaterDecision::SkipOff, decideWatering(ModuleMode::Off, true, true, 0, 35));
 }
 
+void test_water_fail_alarm() {
+  // First dry check after wet: remember water, no alarm yet.
+  TEST_ASSERT_FALSE(shouldRaiseWaterFailAlarm(ModuleMode::Moisture, false, WaterDecision::Water));
+  ASSERT_ENUM(StickyWaterMemory::SetWanted,
+              stickyWaterMemoryAfter(ModuleMode::Moisture, WaterDecision::Water));
+  // Next check still dry: alarm.
+  TEST_ASSERT_TRUE(shouldRaiseWaterFailAlarm(ModuleMode::Moisture, true, WaterDecision::Water));
+  // Soil recovered: clear sticky, no alarm.
+  TEST_ASSERT_FALSE(shouldRaiseWaterFailAlarm(ModuleMode::Moisture, true, WaterDecision::SkipWet));
+  ASSERT_ENUM(StickyWaterMemory::ClearWanted,
+              stickyWaterMemoryAfter(ModuleMode::Moisture, WaterDecision::SkipWet));
+  // Sensor glitch: keep memory, no false alarm.
+  TEST_ASSERT_FALSE(shouldRaiseWaterFailAlarm(ModuleMode::Moisture, true, WaterDecision::SkipSensorError));
+  ASSERT_ENUM(StickyWaterMemory::Keep,
+              stickyWaterMemoryAfter(ModuleMode::Moisture, WaterDecision::SkipSensorError));
+  // Schedule always waters: never this alarm.
+  TEST_ASSERT_FALSE(shouldRaiseWaterFailAlarm(ModuleMode::Schedule, true, WaterDecision::Water));
+  ASSERT_ENUM(StickyWaterMemory::ClearWanted,
+              stickyWaterMemoryAfter(ModuleMode::Schedule, WaterDecision::Water));
+}
+
 void test_mode_keys_roundtrip() {
   for (ModuleMode m : {ModuleMode::Off, ModuleMode::Moisture, ModuleMode::Schedule}) {
     ModuleMode back = ModuleMode::Off;
@@ -170,6 +191,7 @@ void test_alarms() {
   Alarms a = evaluateAlarms({true, 3900, 3500, true, true});
   TEST_ASSERT_FALSE(a.noWater);
   TEST_ASSERT_FALSE(a.lowBattery);
+  TEST_ASSERT_FALSE(a.waterFail);
   a = evaluateAlarms({true, 3400, 3500, true, false});
   TEST_ASSERT_TRUE(a.noWater);
   TEST_ASSERT_TRUE(a.lowBattery);
@@ -179,6 +201,8 @@ void test_alarms() {
   // Checks off: no alarms whatever the readings.
   a = evaluateAlarms({false, 0, 3500, false, false});
   TEST_ASSERT_EQUAL_UINT8(0, alarmBits(a));
+  // waterFail is only via kAlarmWaterFail bit, not from tank sensors.
+  TEST_ASSERT_EQUAL_UINT8(kAlarmWaterFail, alarmBits({false, false, true}));
 }
 
 void test_alarm_for_block() {
@@ -228,6 +252,7 @@ int main() {
   RUN_TEST(test_seconds_until_due);
   RUN_TEST(test_pump_block);
   RUN_TEST(test_decide_watering);
+  RUN_TEST(test_water_fail_alarm);
   RUN_TEST(test_mode_keys_roundtrip);
   RUN_TEST(test_alarms);
   RUN_TEST(test_alarm_for_block);

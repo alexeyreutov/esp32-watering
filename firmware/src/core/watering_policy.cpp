@@ -43,6 +43,31 @@ WaterDecision decideWatering(ModuleMode mode, bool readingOk, bool calibrated, u
   return WaterDecision::SkipOff;
 }
 
+StickyWaterMemory stickyWaterMemoryAfter(ModuleMode mode, WaterDecision decision) {
+  switch (mode) {
+    case ModuleMode::Off:
+    case ModuleMode::Schedule:
+      return StickyWaterMemory::ClearWanted;
+    case ModuleMode::Moisture:
+      switch (decision) {
+        case WaterDecision::Water:
+          return StickyWaterMemory::SetWanted;
+        case WaterDecision::SkipWet:
+        case WaterDecision::SkipOff:
+          return StickyWaterMemory::ClearWanted;
+        case WaterDecision::SkipSensorError:
+        case WaterDecision::SkipUncalibrated:
+          return StickyWaterMemory::Keep;
+      }
+      break;
+  }
+  return StickyWaterMemory::Keep;
+}
+
+bool shouldRaiseWaterFailAlarm(ModuleMode mode, bool previousWantedWater, WaterDecision decision) {
+  return mode == ModuleMode::Moisture && previousWantedWater && decision == WaterDecision::Water;
+}
+
 const char *pumpBlockKey(PumpBlock block) {
   switch (block) {
     case PumpBlock::None:

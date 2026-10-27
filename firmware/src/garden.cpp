@@ -3,7 +3,9 @@
 #include <Preferences.h>
 
 #include "app.h"
+#include "core/event_codes.h"
 #include "core/schedule.h"
+#include "core/watering_policy.h"
 
 namespace wat {
 
@@ -15,6 +17,7 @@ constexpr const char *kNvsNamespace = "garden";
 constexpr uint32_t kCheckSpacingMs = 2500;
 
 String lastRunKey(uint8_t module) { return String("lr") + module; }
+String wantedWaterKey(uint8_t module) { return String("ww") + module; }
 
 DailySlot slotOf(const ModuleConfig &m) { return {m.minuteOfDay, m.everyNDays}; }
 }  // namespace
@@ -25,6 +28,7 @@ void Garden::begin(App &app) {
   const bool open = prefs.begin(kNvsNamespace, /*readOnly=*/true);
   for (uint8_t i = 0; i < kMaxModules; ++i) {
     lastRunDay_[i] = open ? prefs.getInt(lastRunKey(i).c_str(), kNeverRan) : kNeverRan;
+    wantedWaterLast_[i] = open && prefs.getBool(wantedWaterKey(i).c_str(), false);
   }
   if (open) {
     prefs.end();
@@ -40,6 +44,15 @@ void Garden::saveLastRun(uint8_t module) {
     return;
   }
   prefs.putInt(lastRunKey(module).c_str(), lastRunDay_[module]);
+  prefs.end();
+}
+
+void Garden::saveWantedWater(uint8_t module) {
+  Preferences prefs;
+  if (!prefs.begin(kNvsNamespace, /*readOnly=*/false)) {
+    return;
+  }
+  prefs.putBool(wantedWaterKey(module).c_str(), wantedWaterLast_[module]);
   prefs.end();
 }
 
@@ -154,6 +167,28 @@ void Garden::runCheck(uint8_t module, int32_t today, bool persist) {
     app_->log.add(Event::Measured, LogLevel::Info, module, r.raw, r.pct);
   } else {
     app_->log.add(Event::SensorError, LogLevel::Warn, module);
+  }
+
+  if (shouldRaiseWaterFailAlarm(m.mode, wantedWaterLast_[module], decision)) {
+    app_->power.raiseAlarm(kAlarmWaterFail);
+  }
+
+  const StickyWaterMemory mem = stickyWaterMemoryAfter(m.mode, decision);
+  if (mem == StickyWaterMemory::SetWanted && !wantedWaterLast_[module]) {
+    wantedWaterLast_[module] = true;
+    saveWantedWater(module);
+  } else if (mem == StickyWaterMemory::ClearWanted && wantedWaterLast_[module]) {
+    wantedWaterLast_[module] = false;
+    saveWantedWater(module);
+  }
+  if (mem == StickyWaterMemory::ClearWanted) {
+    bool anyWanted = false;
+    for (uint8_t i = 0; i < kMaxModules; ++i) {
+      anyWanted = anyWanted || wantedWaterLast_[i];
+    }
+    if (!anyWanted) {
+      app_->power.clearAlarm(kAlarmWaterFail);
+    }
   }
 
   if (decision != WaterDecision::Water) {

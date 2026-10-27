@@ -154,6 +154,7 @@ void WebUi::handleStatus() {
   JsonObject alarms = doc["alarms"].to<JsonObject>();
   alarms["noWater"] = a.power.noWaterAlarm();
   alarms["lowBattery"] = a.power.lowBatteryAlarm();
+  alarms["waterFail"] = a.power.waterFailAlarm();
 
   JsonArray modules = doc["modules"].to<JsonArray>();
   for (uint8_t i = 0; i < kMaxModules; ++i) {

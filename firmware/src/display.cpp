@@ -100,7 +100,7 @@ void Display::drawTopBar() {
       g_oled.drawStr(12, 9, "AP");
     }
   }
-  if (p.noWaterAlarm()) {
+  if (p.noWaterAlarm() || p.waterFailAlarm()) {
     drawDrop(26, 0, true);
   }
   const uint16_t mv = p.batteryMillivolts();

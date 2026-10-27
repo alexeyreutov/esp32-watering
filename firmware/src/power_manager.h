@@ -40,7 +40,9 @@ class PowerManager {
   uint8_t alarms() const;
   bool noWaterAlarm() const;
   bool lowBatteryAlarm() const;
+  bool waterFailAlarm() const;
   void raiseAlarm(uint8_t bits);
+  void clearAlarm(uint8_t bits);
   uint16_t batteryMillivolts() const { return batteryMv_; }
 
  private:

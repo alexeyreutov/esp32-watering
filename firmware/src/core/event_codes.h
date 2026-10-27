@@ -51,6 +51,7 @@ enum class Event : uint16_t {
 
 constexpr uint8_t kAlarmNoWater = 1u << 0;
 constexpr uint8_t kAlarmLowBattery = 1u << 1;
+constexpr uint8_t kAlarmWaterFail = 1u << 2;  // watered last check, still dry → mechanics / empty
 
 enum class AbortReason : uint8_t {
   UserStop = 1,

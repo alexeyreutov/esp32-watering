@@ -18,6 +18,7 @@ struct AlarmInputs {
 struct Alarms {
   bool noWater;
   bool lowBattery;
+  bool waterFail;  // latched by Garden; not derived from tank/battery sensors
 };
 
 // Battery missing while the check is on counts as low: the pump is blocked

@@ -216,7 +216,7 @@ const EVENT_TEXT={
   38:(a,b)=>`Тревога снята: ${alarmText(a)} (АКБ ${(b/1000).toFixed(2)} В)`,
   39:(a,b)=>a?'Wi-Fi включён кнопкой':`Wi-Fi выключен: ${b?'нет активности':'кнопка / команда'}`,
 };
-function alarmText(bits){const t=[];if(bits&1)t.push('нет воды');if(bits&2)t.push('низкий заряд');return t.join(', ')}
+function alarmText(bits){const t=[];if(bits&1)t.push('нет воды');if(bits&2)t.push('низкий заряд');if(bits&4)t.push('полив не помог');return t.join(', ')}
 
 let S=null,C=null,LOG=null,HIST=null,tab='overview',pollTimer=0,timeSynced=false;
 
@@ -262,6 +262,7 @@ function renderBanners(){
   if(c.lastBlock!=='none'&&c.state==='idle')out.push(['warn','Последний полив заблокирован: '+BLOCK_TEXT[c.lastBlock]+'.']);
   if(S.alarms.noWater)out.push(['err','Тревога «нет воды»: на базе горит красный диод, насос не включается, пока бак пуст. После доливки тревога снимется при следующем пробуждении (или нажмите кнопку дважды: сон → пробуждение).']);
   if(S.alarms.lowBattery)out.push(['err','Тревога «низкий заряд»: на базе горит красный диод, насос не включается ниже порога. После зарядки тревога снимется при следующем пробуждении.']);
+  if(S.alarms.waterFail)out.push(['err','Тревога «полив не помог»: на прошлой проверке модуль уже поливали, а сейчас снова сухо. Скорее сломалась механика (клапан, трубка, насос) или в баке не было воды. Красный диод горит; насос не блокируется. Снимется, когда почва на проверке окажется влажной.']);
   if(S.power.mode==='session'&&S.power.sleepInSec>=0)out.push(['warn',`База уснёт через ${fmtDur(S.power.sleepInSec)} без активности (пока страница открыта — не уснёт) или по нажатию кнопки.`]);
   $('#banners').innerHTML=out.map(([k,t])=>`<div class="banner ${k}">${t}</div>`).join('');
 }

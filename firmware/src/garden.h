@@ -57,10 +57,13 @@ class Garden {
   void runCheck(uint8_t module, int32_t today, bool persist);
   bool scheduled(uint8_t module) const;
   void saveLastRun(uint8_t module);
+  void saveWantedWater(uint8_t module);
 
   App *app_ = nullptr;
   ModuleRuntime runtime_[kMaxModules];
   int32_t lastRunDay_[kMaxModules];
+  // Previous Moisture check decided to water (NVS). Survives deep sleep / reboot.
+  bool wantedWaterLast_[kMaxModules];
   uint32_t lastProbeAt_ = 0;
   uint32_t lastScheduleAt_ = 0;
   bool timeInvalidLogged_ = false;
